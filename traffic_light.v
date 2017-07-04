@@ -6,10 +6,16 @@ endmodule
 //module counter();
 //endmodule
 
+// Have a counter that signals time for pedestrian to stop crossing.
+// Also have the red pedestrian light to blink
+
+//module multiplexer();
+//endmodule
+
 module traffic_light_output(input clock, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2);
 // This is the light module for assigning the proper signals to the proper output ***LED FOR TESTING ATM***
 wire [3:0] state_sig;
-control(.clock(clock), .resetn(resetn), .change(change), .out(out));
+control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
 
  // set1 is LEDR
 // set2 is LEDG
@@ -76,7 +82,7 @@ begin: on_off
 			// Assign T2 to be red
 			 set2[4] = 1'b1;
 			 set2[3] = 1'b0;
-			 set2[2] = 1'b0;
+			 set2[2] = 1'b0;tate_si
 			// Assign P1 to be green
 			 set1[1] = 1'b0;
 			 set1[0] = 1'b1;
