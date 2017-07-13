@@ -1,6 +1,8 @@
-module traffic_light(input [3:0] SW, output [5:0] LEDR, output [5:0] LEDG);
+module traffic_light(input [16:0] SW, input CLOCK_50, output [11:0] GPIO, input [6:0]LEDR);
 	// top level design
-	traffic_light_output(.clock(SW[0]), .resetn(SW[1]), .change(SW[2]), .set1(LEDR), .set2(LEDG));
+	wire new_clock;
+	clock_slower(.clock(CLOCK_50), .led(new_clock));
+	traffic_light_output(.clock(new_clock), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]));
 endmodule
 
 //module counter();
@@ -11,6 +13,25 @@ endmodule
 
 //module multiplexer();
 //endmodule
+
+module clock_slower(input clock, output reg led);
+	reg [32:0] timer = 32'd30000000;
+	// On positive clock edge
+
+	always @(posedge clock)
+	begin
+		// Set led to value of zero
+		
+		// When the timer count is not zero decrement by 1
+		if (timer != 32'd0) 
+			timer <= timer - 1;
+		// If t1'b1imer count reaches zero, turn it on.
+		else begin
+			led <= ~led;
+			timer <= 32'd30000000; // 30000000
+		end
+	end
+endmodule
 
 module traffic_light_output(input clock, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2);
 // This is the light module for assigning the proper signals to the proper output ***LED FOR TESTING ATM***
@@ -28,7 +49,7 @@ always @(*)
 begin: on_off
 	case(state_sig)
 		4'b0000: begin
-			// Assign T1 to be red
+			// Assign T1 to be GPIO[5:0]
 			set1[4] = 1'b1;
 			 set1[3] = 1'b0;
 			 set1[2] = 1'b0;
@@ -61,6 +82,7 @@ begin: on_off
 			// Assign T1 to be red
 			 set1[4] = 1'b1;
 			 set1[3] = 1'b0;
+
 			 set1[2] = 1'b0;
 			// Assign T2 to be Yellow
 			 set2[4] = 1'b0;
@@ -82,7 +104,7 @@ begin: on_off
 			// Assign T2 to be red
 			 set2[4] = 1'b1;
 			 set2[3] = 1'b0;
-			 set2[2] = 1'b0;tate_si
+			 set2[2] = 1'b0;
 			// Assign P1 to be green
 			 set1[1] = 1'b0;
 			 set1[0] = 1'b1;
@@ -126,6 +148,32 @@ begin: on_off
 			end
 	endcase
 end
+endmodule
+
+
+module traffic_delay(enable, parload, resetn, clock, s, q);
+// rate divider for slowing down clock cycles
+	input enable, parload, resetn, clock;
+	input [1:0] s;
+	output reg [31:0] q;
+	reg [31:0] d;
+	always @(posedge clock)
+	begin
+			if (resetn == 1'b0)
+				q <= 0;
+			else if (parload == 1'b1)
+			begin
+					case(s)
+							1'b0: d = 128'd750;
+							1'b1: d = 128'd150;
+					endcase
+					q <= d;
+			end
+			else if (q == d)
+					q <= 0;
+			else if (enable == 1'b1)
+					q <= q + 1'b1;
+		end
 endmodule
 
 
@@ -178,3 +226,30 @@ module control(input clock, input resetn, input change, output [3:0] out);
 	assign out = curr;
 
 endmodule
+
+module hex_decoder(hex_digit, segments);
+    input hex_digit; // change it back to [3:0]
+    output reg [6:0] segments;
+
+    always @(*)
+        case (hex_digit)
+            4'h0: segments = 7'b100_0000;
+            4'h1: segments = 7'b111_1001;
+            4'h2: segments = 7'b010_0100;
+            4'h3: segments = 7'b011_0000;
+            4'h4: segments = 7'b001_1001;
+            4'h5: segments = 7'b001_0010;
+            4'h6: segments = 7'b000_0010;
+            4'h7: segments = 7'b111_1000;
+            4'h8: segments = 7'b000_0000;
+            4'h9: segments = 7'b001_1000;
+            4'hA: segments = 7'b000_1000;
+            4'hB: segments = 7'b000_0011;
+            4'hC: segments = 7'b100_0110;
+            4'hD: segments = 7'b010_0001;
+            4'hE: segments = 7'b000_0110;
+            4'hF: segments = 7'b000_1110;
+            default: segments = 7'h7f;
+        endcase
+endmodule
+
