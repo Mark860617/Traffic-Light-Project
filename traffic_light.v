@@ -1,39 +1,116 @@
+/*LIST YOUR ULTIMATE SWAGGER IDEAS HERE
+- PEDESTRIAN CROSS BUTTON
+- MANUAL CONTROL VS AUTOMATION
+- SHOW STATUS ON VGA
+*/
+
+
 module traffic_light(input [16:0] SW, input CLOCK_50, output [11:0] GPIO, input [6:0]LEDR);
-	// top level design
+	// The top level design for the traffic light intersection
+	//Create wires for the slowed down clock signal and the timer.
 	wire new_clock;
-	clock_slower(.clock(CLOCK_50), .led(new_clock));
-	traffic_light_output(.clock(new_clock), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]));
+	wire timer;
+	// Slow down the clock signal from 50 Mhz to about 1 hz
+	clock_slower(.clock(CLOCK_50), .select_time(timer), .led(new_clock));
+	// Adjust the different lengths before transitions of each light. 
+	traffic_light_timer(.clock(new_clock), .resetn(SW[1]), .change(SW[2]), .timer(timer));
+	// Output the desired signal through the GPIO pins into the indicated LEDs
+	traffic_light_output(.clock(new_clock), .clock2(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]));
 endmodule
 
-//module counter();
-//endmodule
-
-// Have a counter that signals time for pedestrian to stop crossing.
-// Also have the red pedestrian light to blink
-
-//module multiplexer();
-//endmodule
-
-module clock_slower(input clock, output reg led);
+module flashLED(input clock, output reg led);
+	// The module for flashing the indicated LEDs
+	// Set the timer to countdown from CLOCK_50
 	reg [32:0] timer = 32'd30000000;
+	
 	// On positive clock edge
-
 	always @(posedge clock)
 	begin
-		// Set led to value of zero
-		
 		// When the timer count is not zero decrement by 1
 		if (timer != 32'd0) 
 			timer <= timer - 1;
-		// If t1'b1imer count reaches zero, turn it on.
+		// If timer count reaches zero, reverse LED state and reset the timer.
 		else begin
 			led <= ~led;
-			timer <= 32'd30000000; // 30000000
+			timer <= 32'd30000000;
 		end
 	end
 endmodule
 
-module traffic_light_output(input clock, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2);
+
+module clock_slower(input clock, input select_time, output reg led);
+	// The module for slowing down CLOCK_50's clock speed
+	// Create registers for the desired countdown and the timer.
+	reg [32:0] d;
+	reg [32:0] timer;
+	// On positive clock edge
+	always @ (posedge clock)
+		begin
+		case (select_time)
+			// Allocate the desired countdown interval depending on the select_time signal
+			1'b0: d = 32'd180000000;
+			1'b1: d = 32'd30000000;
+			default: d = 0;
+		endcase
+		
+		// Set timer to the desired countdown interval
+		timer <= d;
+		
+		// When the timer count is not zero decrement timer by 1
+		if (timer != 32'd0) 
+			timer <= timer - 1;
+		// If t1'b1imer count reaches zero, reverse LED signal and set timer to desired countdown
+		else begin
+			led <= ~led;
+			timer <= d; // 30000000
+		end
+	end
+endmodule
+
+
+module traffic_light_timer(input clock, input resetn, input change, output reg timer);
+// This is the light module for assigning the proper signals to the proper output
+wire [3:0] state_sig;
+control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
+
+ // set1 is LEDR
+// set2 is LEDG
+	//send signal to the breadboard
+	//set1[1:0] P1 (Pedestrian Light Set 1)
+	//set1[4:2] T1 (Traffic Light Set 1)
+	//set2[1:0] P2 (Pedestrian Light Set 2)
+	//set2[4:2] T2 (Traffic Light Set 2)
+always @(*)
+begin: on_off
+	case(state_sig)
+		4'b0000: begin //T1 R T2 G 10 secs
+			timer = 1'b0;
+			end
+		4'b0001: begin //T1 R T2 G 10 secs
+			timer = 1'b0;
+			end
+		4'b0010: begin //T1 R T2 Y 3 secs
+			timer = 1'b1;
+			end
+
+		4'b0011: begin //T1 G T2 R 10 secs
+			timer = 1'b0;
+			end
+
+		4'b0100: begin //T1 G T2 R 10 secs
+			timer = 1'b0;
+			end
+
+		4'b0101: begin //T1 Y T2 R 3 secs
+			timer = 1'b1;
+			end
+	endcase
+end
+endmodule
+
+
+
+module traffic_light_output(input clock, input clock2, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2);
 // This is the light module for assigning the proper signals to the proper output ***LED FOR TESTING ATM***
 wire [3:0] state_sig;
 control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
@@ -45,11 +122,13 @@ control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
 	//set1[4:2] T1
 	//set2[1:0] P2
 	//set2[4:2] T2
+wire flash_ped;
+flashLED(.clock(clock2), .led(flash_ped));
 always @(*)
 begin: on_off
 	case(state_sig)
 		4'b0000: begin
-			// Assign T1 to be GPIO[5:0]
+			// Assign T1 to be red
 			set1[4] = 1'b1;
 			 set1[3] = 1'b0;
 			 set1[2] = 1'b0;
@@ -76,13 +155,16 @@ begin: on_off
 			// Assign P1 to be red
 			 set1[1] = 1'b1;
 			 set1[0] = 1'b0;
+			 // Assign P2 to be green 
+			 //Fashinf ped light on P2
+			 set2[1] = flash_ped;
+			 set2[0] = 1'b0;
 			// 
 			end
 		4'b0010: begin
 			// Assign T1 to be red
 			 set1[4] = 1'b1;
 			 set1[3] = 1'b0;
-
 			 set1[2] = 1'b0;
 			// Assign T2 to be Yellow
 			 set2[4] = 1'b0;
@@ -123,8 +205,8 @@ begin: on_off
 			 set2[3] = 1'b0;
 			 set2[2] = 1'b0;
 			// Assign P1 to be green
-			 set1[1] = 1'b0;
-			 set1[0] = 1'b1;
+			 set1[1] = flash_ped;
+			 set1[0] = 1'b0;
 			// Assign P2 to be red 
 			 set2[1] = 1'b1;
 			 set2[0] = 1'b0;
@@ -150,31 +232,6 @@ begin: on_off
 end
 endmodule
 
-
-module traffic_delay(enable, parload, resetn, clock, s, q);
-// rate divider for slowing down clock cycles
-	input enable, parload, resetn, clock;
-	input [1:0] s;
-	output reg [31:0] q;
-	reg [31:0] d;
-	always @(posedge clock)
-	begin
-			if (resetn == 1'b0)
-				q <= 0;
-			else if (parload == 1'b1)
-			begin
-					case(s)
-							1'b0: d = 128'd750;
-							1'b1: d = 128'd150;
-					endcase
-					q <= d;
-			end
-			else if (q == d)
-					q <= 0;
-			else if (enable == 1'b1)
-					q <= q + 1'b1;
-		end
-endmodule
 
 
 module control(input clock, input resetn, input change, output [3:0] out);
