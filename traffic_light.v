@@ -5,23 +5,64 @@
 */
 
 
-module traffic_light(input [16:0] SW, input CLOCK_50, output [11:0] GPIO, input [6:0]LEDR);
+module traffic_light(input [16:0] SW, input CLOCK_50, output [11:0] GPIO, input [7:0]LEDR, output [6:0] HEX4, output [6:0] HEX5, output [6:0] HEX6, output [6:0] HEX7);
 	// The top level design for the traffic light intersection
 	//Create wires for the slowed down clock signal and the timer.
 	wire new_clock;
 	wire timer;
+	wire [7:0] ped_count1;
+	wire [7:0] ped_count2;
 	// Slow down the clock signal from 50 Mhz to about 1 hz
 	clock_slower(.clock(CLOCK_50), .select_time(timer), .led(new_clock));
 	// Adjust the different lengths before transitions of each light. 
 	traffic_light_timer(.clock(new_clock), .resetn(SW[1]), .change(SW[2]), .timer(timer));
 	// Output the desired signal through the GPIO pins into the indicated LEDs
-	traffic_light_output(.clock(new_clock), .clock2(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]));
+	traffic_light_output(.clock(new_clock), .clock2(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2));
+	hex_decoder(.hex_digit(ped_count1[7:4]), .segments(HEX7));
+	hex_decoder(.hex_digit(ped_count1[3:0]), .segments(HEX6));
+	hex_decoder(.hex_digit(ped_count2[7:4]), .segments(HEX5));
+	hex_decoder(.hex_digit(ped_count2[3:0]), .segments(HEX4));
 endmodule
+
+
+module pedestrian_counter(input clock, input enable, output reg [7:0] digits);
+	reg [32:0] timer = 32'd50000000; //CLOCK_50 is a clock that pulses at 50MHz or 50 millions times per second.change back to 30 mil if over 1 second
+	reg [7:0] init;
+	// 15 in hexadeximal or 8h'15
+	// On positive clock edge
+	always @(posedge clock)
+	begin
+		if (enable == 1) begin
+			// When the timer count is not zero decrement by 1
+			if (timer != 32'd0) 
+				timer <= timer - 1;
+			// If timer count reaches zero, reverse LED state and reset the timer.
+			else if (init == 8'b0001_0000) begin
+				init <= init - 4'b0111;
+				timer <= 32'd50000000;
+			end
+			else if (init == 8'b0000_0000) begin
+				init <= 8'b0001_0101;
+				timer <= 32'd50000000;
+			end
+			else begin 
+				init <= init - 1'b1;
+				timer <= 32'd50000000;
+			end
+			
+		end
+		else begin
+			init <= 0;
+		end
+		digits <= init;
+	end
+endmodule
+
 
 module flashLED(input clock, output reg led);
 	// The module for flashing the indicated LEDs
 	// Set the timer to countdown from CLOCK_50
-	reg [32:0] timer = 32'd30000000;
+	reg [32:0] timer = 32'd25000000; //CLOCK_50 is a clock that pulses at 50MHz or 50 millions times per second.change back to 30 mil if over 1 second
 	
 	// On positive clock edge
 	always @(posedge clock)
@@ -32,7 +73,7 @@ module flashLED(input clock, output reg led);
 		// If timer count reaches zero, reverse LED state and reset the timer.
 		else begin
 			led <= ~led;
-			timer <= 32'd30000000;
+			timer <= 32'd25000000;
 		end
 	end
 endmodule
@@ -48,8 +89,8 @@ module clock_slower(input clock, input select_time, output reg led);
 		begin
 		case (select_time)
 			// Allocate the desired countdown interval depending on the select_time signal
-			1'b0: d = 32'd180000000;
-			1'b1: d = 32'd30000000;
+			1'b0: d = 32'd405000000; // Red/ green light
+			1'b1: d = 32'd1; // yellow light time interval
 			default: d = 0;
 		endcase
 		
@@ -110,7 +151,7 @@ endmodule
 
 
 
-module traffic_light_output(input clock, input clock2, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2);
+module traffic_light_output(input clock, input clock2, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2);
 // This is the light module for assigning the proper signals to the proper output ***LED FOR TESTING ATM***
 wire [3:0] state_sig;
 control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
@@ -123,9 +164,14 @@ control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
 	//set2[1:0] P2
 	//set2[4:2] T2
 wire flash_ped;
+wire [7:0] count;
+reg enable;
+pedestrian_counter(.clock(clock2), .enable(enable), .digits(count));
 flashLED(.clock(clock2), .led(flash_ped));
+
 always @(*)
 begin: on_off
+	
 	case(state_sig)
 		4'b0000: begin
 			// Assign T1 to be red
@@ -142,6 +188,11 @@ begin: on_off
 			// Assign P2 to be green 
 			 set2[1] = 1'b0;
 			 set2[0] = 1'b1;
+			 // Assign ped_count1 to 0
+			 ped_count1 = 1'b0;
+			 ped_count2 = 1'b0;
+			 enable = 1'b0;
+
 			end
 		4'b0001: begin
 			// Assign T1 to be red
@@ -156,9 +207,13 @@ begin: on_off
 			 set1[1] = 1'b1;
 			 set1[0] = 1'b0;
 			 // Assign P2 to be green 
-			 //Fashinf ped light on P2
+			 //Flashing ped light on P2
 			 set2[1] = flash_ped;
 			 set2[0] = 1'b0;
+			 ped_count1 = 1'b0;
+			 ped_count2 = count;
+			 enable = 1'b1;
+
 			// 
 			end
 		4'b0010: begin
@@ -176,6 +231,9 @@ begin: on_off
 			// Assign P2 to be Red
 			 set2[1] = 1'b1;
 			 set2[0] = 1'b0;
+			 ped_count1 = 1'b0;
+			 ped_count2 = 1'b0;
+			 enable = 1'b0;
 			end
 
 		4'b0011: begin
@@ -193,6 +251,9 @@ begin: on_off
 			// Assign P2 to be red 
 			 set2[1] = 1'b1;
 			 set2[0] = 1'b0;
+			 ped_count1 = 1'b0;
+			 ped_count2 = 1'b0;
+			 enable = 1'b0;
 			end
 
 		4'b0100: begin
@@ -210,6 +271,9 @@ begin: on_off
 			// Assign P2 to be red 
 			 set2[1] = 1'b1;
 			 set2[0] = 1'b0;
+			 ped_count1 = count;
+			 ped_count2 = 1'b0;
+			 enable = 1'b1;
 			end
 
 		4'b0101: begin
@@ -227,6 +291,9 @@ begin: on_off
 			// Assign P2 to be red 
 			 set2[1] = 1'b1;
 			 set2[0] = 1'b0;
+			 ped_count1 = 1'b0;
+			 ped_count2 = 1'b0;
+			 enable = 1'b0;
 			end
 	endcase
 end
@@ -241,6 +308,7 @@ module control(input clock, input resetn, input change, output [3:0] out);
 	//State A is T1 red, T2 green, p1 red, p2 green
 	localparam A = 4'b0000, B = 4'b0001, C = 4'b0010, D = 4'b0011, E = 4'b0100, F = 4'b0101;
 
+	//The state table for the various states of the traffic lights
 	always @(*)
 	begin: state_table
 		case(curr)
@@ -273,6 +341,7 @@ module control(input clock, input resetn, input change, output [3:0] out);
 	end
 
 	always @(posedge clock)
+	//Set the current state to the next state if the reset is not 0
 		begin: flip_flops
 			if (resetn == 1'b0)
 				curr <= A;
@@ -285,7 +354,8 @@ module control(input clock, input resetn, input change, output [3:0] out);
 endmodule
 
 module hex_decoder(hex_digit, segments);
-    input hex_digit; // change it back to [3:0]
+// The hex decoder for the pedestrian traffic lights
+    input [3:0] hex_digit; 
     output reg [6:0] segments;
 
     always @(*)
