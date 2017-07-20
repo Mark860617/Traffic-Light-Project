@@ -1,27 +1,73 @@
-/*LIST YOUR ULTIMATE SWAGGER IDEAS HERE
-- PEDESTRIAN CROSS BUTTON
-- MANUAL CONTROL VS AUTOMATION
-- SHOW STATUS ON VGA
-*/
 
-
-module traffic_light(input [16:0] SW, input CLOCK_50, output [11:0] GPIO, input [7:0]LEDR, output [6:0] HEX4, output [6:0] HEX5, output [6:0] HEX6, output [6:0] HEX7);
+module traffic_light(input [17:0] SW, input CLOCK_50, output [11:0] GPIO, output [6:0] HEX4, output [6:0] HEX5, output [6:0] HEX6, output [6:0] HEX7);
 	// The top level design for the traffic light intersection
 	//Create wires for the slowed down clock signal and the timer.
-	wire new_clock;
-	wire timer;
 	wire [7:0] ped_count1;
 	wire [7:0] ped_count2;
 	// Slow down the clock signal from 50 Mhz to about 1 hz
-	clock_slower(.clock(CLOCK_50), .select_time(timer), .led(new_clock));
+	//clock_slower(.clock(CLOCK_50), .select_time(timer), .led(new_clock));
 	// Adjust the different lengths before transitions of each light. 
-	traffic_light_timer(.clock(new_clock), .resetn(SW[1]), .change(SW[2]), .timer(timer));
+	//traffic_light_timer(.clock(new_clock), .resetn(SW[1]), .change(SW[2]), .timer(timer));
 	// Output the desired signal through the GPIO pins into the indicated LEDs
-	traffic_light_output(.clock(new_clock), .clock2(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2));
+	//traffic_light_output(.clock(new_clock), .clock2(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2));
+	set_traffic(.s(SW[17:16]), .clock(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2));
 	hex_decoder(.hex_digit(ped_count1[7:4]), .segments(HEX7));
 	hex_decoder(.hex_digit(ped_count1[3:0]), .segments(HEX6));
 	hex_decoder(.hex_digit(ped_count2[7:4]), .segments(HEX5));
 	hex_decoder(.hex_digit(ped_count2[3:0]), .segments(HEX4));
+endmodule
+
+module set_traffic(input [1:0] s, input clock, input resetn, input change, output reg [4:0] set1, output reg [4:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2);
+	wire [4:0] s1, s2;
+	wire [7:0] p1, p2;
+	wire flash_led;
+	wire new_clock;
+	wire timer;
+	clock_slower(.clock(clock), .select_time(timer), .led(new_clock));
+	traffic_light_timer(.clock(new_clock), .resetn(resetn), .change(change), .timer(timer));
+	traffic_light_output(.clock(new_clock), .clock2(clock), .resetn(resetn), .change(change), .set1(s1), .set2(s2), .ped_count1(p1), .ped_count2(p2));
+	flashLED(.clock(clock), .led(flash_led));
+	always @(*)
+	begin
+		case(s[1:0])
+			2'b01: begin 
+				set1 <= s1; 
+				set2 <= s2; 
+				ped_count1 <= p1; 
+				ped_count2 <= p2;
+				end
+			2'b10: begin 
+				set1[4] <= flash_led;
+				set1[3] <= 0;
+				set1[2] <= 0;
+				set1[1] <= 0;
+				set1[0] <= 0;
+				set2[4] <= flash_led;
+				set2[3] <= 0;
+				set2[2] <= 0;
+				set2[1] <= 0;
+				set2[0] <= 0;
+				end
+			2'b11: begin 
+				set1[4] <= 0;
+				set1[3] <= flash_led;
+				set1[2] <= 0;
+				set1[1] <= 0;
+				set1[0] <= 0;
+				set2[4] <= 0;
+				set2[3] <= flash_led;
+				set2[2] <= 0;
+				set2[1] <= 0;
+				set2[0] <= 0;
+				end
+			default: begin
+				set1 <= 0;
+				set2 <= 0;
+				ped_count1 <= 0;
+				ped_count2 <= 0;
+				end
+		endcase
+	end
 endmodule
 
 
@@ -313,7 +359,7 @@ module control(input clock, input resetn, input change, output [3:0] out);
 	begin: state_table
 		case(curr)
 			A: begin
-				if (!change) next <= A;
+				if (!change) next <= A;				
 				else next <= B;
 			end
 			B: begin
@@ -379,4 +425,3 @@ module hex_decoder(hex_digit, segments);
             default: segments = 7'h7f;
         endcase
 endmodule
-
