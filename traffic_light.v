@@ -1,5 +1,5 @@
 
-module traffic_light(input [17:0] SW, input CLOCK_50, output [11:0] GPIO, output [6:0] HEX4, output [6:0] HEX5, output [6:0] HEX6, output [6:0] HEX7);
+module traffic_light(input [17:0] SW, input CLOCK_50, output [35:0] GPIO, output [6:0] HEX4, output [6:0] HEX5, output [6:0] HEX6, output [6:0] HEX7);
 	// The top level design for the traffic light intersection
 	//Create wires for the slowed down clock signal and the timer.
 	wire [7:0] ped_count1;
@@ -10,22 +10,23 @@ module traffic_light(input [17:0] SW, input CLOCK_50, output [11:0] GPIO, output
 	//traffic_light_timer(.clock(new_clock), .resetn(SW[1]), .change(SW[2]), .timer(timer));
 	// Output the desired signal through the GPIO pins into the indicated LEDs
 	//traffic_light_output(.clock(new_clock), .clock2(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2));
-	set_traffic(.s(SW[17:16]), .clock(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2));
+	set_traffic(.s(SW[17:16]), .clock(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2), .ped_sound1(GPIO[34]), .ped_sound2(GPIO[35]));
 	hex_decoder(.hex_digit(ped_count1[7:4]), .segments(HEX7));
 	hex_decoder(.hex_digit(ped_count1[3:0]), .segments(HEX6));
 	hex_decoder(.hex_digit(ped_count2[7:4]), .segments(HEX5));
 	hex_decoder(.hex_digit(ped_count2[3:0]), .segments(HEX4));
 endmodule
 
-module set_traffic(input [1:0] s, input clock, input resetn, input change, output reg [4:0] set1, output reg [4:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2);
+module set_traffic(input [1:0] s, input clock, input resetn, input change, output reg [4:0] set1, output reg [4:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2, output reg ped_sound1, output reg ped_sound2);
 	wire [4:0] s1, s2;
 	wire [7:0] p1, p2;
 	wire flash_led;
 	wire new_clock;
 	wire timer;
+	wire sound1, sound2;
 	clock_slower(.clock(clock), .select_time(timer), .led(new_clock));
 	traffic_light_timer(.clock(new_clock), .resetn(resetn), .change(change), .timer(timer));
-	traffic_light_output(.clock(new_clock), .clock2(clock), .resetn(resetn), .change(change), .set1(s1), .set2(s2), .ped_count1(p1), .ped_count2(p2));
+	traffic_light_output(.clock(new_clock), .clock2(clock), .resetn(resetn), .change(change), .set1(s1), .set2(s2), .ped_count1(p1), .ped_count2(p2), .ped_sound1(sound1), .ped_sound2(sound2));
 	flashLED(.clock(clock), .led(flash_led));
 	always @(*)
 	begin
@@ -35,6 +36,8 @@ module set_traffic(input [1:0] s, input clock, input resetn, input change, outpu
 				set2 <= s2; 
 				ped_count1 <= p1; 
 				ped_count2 <= p2;
+				ped_sound1 <= sound1;
+				ped_sound2 <= sound2;
 				end
 			2'b10: begin 
 				set1[4] <= flash_led;
@@ -197,7 +200,7 @@ endmodule
 
 
 
-module traffic_light_output(input clock, input clock2, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2);
+module traffic_light_output(input clock, input clock2, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2, output reg ped_sound1, output reg ped_sound2);
 // This is the light module for assigning the proper signals to the proper output ***LED FOR TESTING ATM***
 wire [3:0] state_sig;
 control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
@@ -212,8 +215,10 @@ control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
 wire flash_ped;
 wire [7:0] count;
 reg enable;
+wire beep;
 pedestrian_counter(.clock(clock2), .enable(enable), .digits(count));
 flashLED(.clock(clock2), .led(flash_ped));
+flashLED(.clock(clock2), .led(beep));
 
 always @(*)
 begin: on_off
@@ -238,6 +243,8 @@ begin: on_off
 			 ped_count1 = 1'b0;
 			 ped_count2 = 1'b0;
 			 enable = 1'b0;
+			 ped_sound1 = 1'b0;
+			 ped_sound2 = 1'b0;
 
 			end
 		4'b0001: begin
@@ -259,6 +266,8 @@ begin: on_off
 			 ped_count1 = 1'b0;
 			 ped_count2 = count;
 			 enable = 1'b1;
+			 ped_sound1 = 1'b0;
+			 ped_sound2 = beep;
 
 			// 
 			end
@@ -280,6 +289,8 @@ begin: on_off
 			 ped_count1 = 1'b0;
 			 ped_count2 = 1'b0;
 			 enable = 1'b0;
+			 ped_sound1 = 1'b0;
+			 ped_sound2 = 1'b0;
 			end
 
 		4'b0011: begin
@@ -300,6 +311,8 @@ begin: on_off
 			 ped_count1 = 1'b0;
 			 ped_count2 = 1'b0;
 			 enable = 1'b0;
+			 ped_sound1 = 1'b0;
+			 ped_sound2 = 1'b0;
 			end
 
 		4'b0100: begin
@@ -320,6 +333,8 @@ begin: on_off
 			 ped_count1 = count;
 			 ped_count2 = 1'b0;
 			 enable = 1'b1;
+			 ped_sound1 = beep;
+			 ped_sound2 = 1'b0;
 			end
 
 		4'b0101: begin
@@ -340,6 +355,8 @@ begin: on_off
 			 ped_count1 = 1'b0;
 			 ped_count2 = 1'b0;
 			 enable = 1'b0;
+			 ped_sound1 = 1'b0;
+			 ped_sound2 = 1'b0;
 			end
 	endcase
 end
