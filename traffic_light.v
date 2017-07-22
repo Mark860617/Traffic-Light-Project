@@ -1,5 +1,5 @@
 
-module traffic_light(input [17:0] SW, input CLOCK_50, output [35:0] GPIO, output [6:0] HEX4, output [6:0] HEX5, output [6:0] HEX6, output [6:0] HEX7);
+module traffic_light(input [17:0] SW, input CLOCK_50, output [35:0] GPIO, output [6:0] HEX4, output [6:0] HEX5, output [6:0] HEX6, output [6:0] HEX7, output [6:0] HEX3, output [6:0] HEX2, output [6:0] HEX1, output [6:0] HEX0);
 	// The top level design for the traffic light intersection
 	//Create wires for the slowed down clock signal and the timer.
 	wire [7:0] ped_count1;
@@ -13,8 +13,12 @@ module traffic_light(input [17:0] SW, input CLOCK_50, output [35:0] GPIO, output
 	set_traffic(.s(SW[17:16]), .clock(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2), .ped_sound1(GPIO[34]), .ped_sound2(GPIO[35]));
 	hex_decoder(.hex_digit(ped_count1[7:4]), .segments(HEX7));
 	hex_decoder(.hex_digit(ped_count1[3:0]), .segments(HEX6));
-	hex_decoder(.hex_digit(ped_count2[7:4]), .segments(HEX5));
-	hex_decoder(.hex_digit(ped_count2[3:0]), .segments(HEX4));
+	hex_decoder(.hex_digit(ped_count1[7:4]), .segments(HEX5));
+	hex_decoder(.hex_digit(ped_count1[3:0]), .segments(HEX4));
+	hex_decoder(.hex_digit(ped_count2[7:4]), .segments(HEX3));
+	hex_decoder(.hex_digit(ped_count2[3:0]), .segments(HEX2));
+	hex_decoder(.hex_digit(ped_count2[7:4]), .segments(HEX1));
+	hex_decoder(.hex_digit(ped_count2[3:0]), .segments(HEX0));
 endmodule
 
 module set_traffic(input [1:0] s, input clock, input resetn, input change, output reg [4:0] set1, output reg [4:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2, output reg ped_sound1, output reg ped_sound2);
@@ -50,6 +54,10 @@ module set_traffic(input [1:0] s, input clock, input resetn, input change, outpu
 				set2[2] <= 0;
 				set2[1] <= 0;
 				set2[0] <= 0;
+				ped_count1 <= 0;
+				ped_count2 <= 0;
+				ped_sound1 <= 0;
+				ped_sound2 <= 0;
 				end
 			2'b11: begin 
 				set1[4] <= 0;
@@ -62,12 +70,18 @@ module set_traffic(input [1:0] s, input clock, input resetn, input change, outpu
 				set2[2] <= 0;
 				set2[1] <= 0;
 				set2[0] <= 0;
+				ped_count1 <= 0;
+				ped_count2 <= 0;
+				ped_sound1 <= 0;
+				ped_sound2 <= 0;
 				end
 			default: begin
 				set1 <= 0;
 				set2 <= 0;
 				ped_count1 <= 0;
 				ped_count2 <= 0;
+				ped_sound1 <= 0;
+				ped_sound2 <= 0;
 				end
 		endcase
 	end
