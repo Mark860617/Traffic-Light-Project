@@ -1,4 +1,3 @@
-
 module traffic_light(input [17:0] SW, input CLOCK_50, output [35:0] GPIO, output [6:0] HEX4, output [6:0] HEX5, output [6:0] HEX6, output [6:0] HEX7, output [6:0] HEX3, output [6:0] HEX2, output [6:0] HEX1, output [6:0] HEX0);
 	// The top level design for the traffic light intersection
 	//Create wires for the slowed down clock signal and the timer.
@@ -28,7 +27,7 @@ module set_traffic(input [1:0] s, input clock, input resetn, input change, outpu
 	wire new_clock;
 	wire timer;
 	wire sound1, sound2;
-	clock_slower(.clock(clock), .select_time(timer), .led(new_clock));
+	clock_slower(.clock(clock), .select_time(timer), .new_clock(new_clock));
 	traffic_light_timer(.clock(new_clock), .resetn(resetn), .change(change), .timer(timer));
 	traffic_light_output(.clock(new_clock), .clock2(clock), .resetn(resetn), .change(change), .set1(s1), .set2(s2), .ped_count1(p1), .ped_count2(p2), .ped_sound1(sound1), .ped_sound2(sound2));
 	flashLED(.clock(clock), .led(flash_led));
@@ -142,7 +141,7 @@ module flashLED(input clock, output reg led);
 endmodule
 
 
-module clock_slower(input clock, input select_time, output reg led);
+module clock_slower(input clock, input select_time, output reg new_clock);
 	// The module for slowing down CLOCK_50's clock speed
 	// Create registers for the desired countdown and the timer.
 	reg [32:0] d;
@@ -165,7 +164,7 @@ module clock_slower(input clock, input select_time, output reg led);
 			timer <= timer - 1;
 		// If t1'b1imer count reaches zero, reverse LED signal and set timer to desired countdown
 		else begin
-			led <= ~led;
+			new_clock <= ~new_clock;
 			timer <= d; // 30000000
 		end
 	end
@@ -173,207 +172,207 @@ endmodule
 
 
 module traffic_light_timer(input clock, input resetn, input change, output reg timer);
-// This is the light module for assigning the proper signals to the proper output
-wire [3:0] state_sig;
-control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
+	// This is the light module for assigning the proper signals to the proper output
+	wire [3:0] state_sig;
+	control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
 
- // set1 is LEDR
-// set2 is LEDG
-	//send signal to the breadboard
-	//set1[1:0] P1 (Pedestrian Light Set 1)
-	//set1[4:2] T1 (Traffic Light Set 1)
-	//set2[1:0] P2 (Pedestrian Light Set 2)
-	//set2[4:2] T2 (Traffic Light Set 2)
-always @(*)
-begin: on_off
-	case(state_sig)
-		4'b0000: begin //T1 R T2 G 10 secs
-			timer = 1'b0;
-			end
-		4'b0001: begin //T1 R T2 G 10 secs
-			timer = 1'b0;
-			end
-		4'b0010: begin //T1 R T2 Y 3 secs
-			timer = 1'b1;
-			end
+	 // set1 is LEDR
+	// set2 is LEDG
+		//send signal to the breadboard
+		//set1[1:0] P1 (Pedestrian Light Set 1)
+		//set1[4:2] T1 (Traffic Light Set 1)
+		//set2[1:0] P2 (Pedestrian Light Set 2)
+		//set2[4:2] T2 (Traffic Light Set 2)
+	always @(*)
+	begin: on_off
+		case(state_sig)
+			4'b0000: begin //T1 R T2 G 10 secs
+				timer = 1'b0;
+				end
+			4'b0001: begin //T1 R T2 G 10 secs
+				timer = 1'b0;
+				end
+			4'b0010: begin //T1 R T2 Y 3 secs
+				timer = 1'b1;
+				end
 
-		4'b0011: begin //T1 G T2 R 10 secs
-			timer = 1'b0;
-			end
+			4'b0011: begin //T1 G T2 R 10 secs
+				timer = 1'b0;
+				end
 
-		4'b0100: begin //T1 G T2 R 10 secs
-			timer = 1'b0;
-			end
+			4'b0100: begin //T1 G T2 R 10 secs
+				timer = 1'b0;
+				end
 
-		4'b0101: begin //T1 Y T2 R 3 secs
-			timer = 1'b1;
-			end
-	endcase
-end
+			4'b0101: begin //T1 Y T2 R 3 secs
+				timer = 1'b1;
+				end
+		endcase
+	end
 endmodule
 
 
 
 module traffic_light_output(input clock, input clock2, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2, output reg ped_sound1, output reg ped_sound2);
-// This is the light module for assigning the proper signals to the proper output ***LED FOR TESTING ATM***
-wire [3:0] state_sig;
-control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
+	// This is the light module for assigning the proper signals to the proper output ***LED FOR TESTING ATM***
+	wire [3:0] state_sig;
+	control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
 
- // set1 is LEDR
-// set2 is LEDG
-	//send signal to the breadboard
-	//set1[1:0] P1
-	//set1[4:2] T1
-	//set2[1:0] P2
-	//set2[4:2] T2
-wire flash_ped;
-wire [7:0] count;
-reg enable;
-wire beep;
-pedestrian_counter(.clock(clock2), .enable(enable), .digits(count));
-flashLED(.clock(clock2), .led(flash_ped));
-flashLED(.clock(clock2), .led(beep));
+	 // set1 is LEDR
+	// set2 is LEDG
+		//send signal to the breadboard
+		//set1[1:0] P1
+		//set1[4:2] T1
+		//set2[1:0] P2
+		//set2[4:2] T2
+	wire flash_ped;
+	wire [7:0] count;
+	reg enable;
+	wire beep;
+	pedestrian_counter(.clock(clock2), .enable(enable), .digits(count));
+	flashLED(.clock(clock2), .led(flash_ped));
+	flashLED(.clock(clock2), .led(beep));
 
-always @(*)
-begin: on_off
-	
-	case(state_sig)
-		4'b0000: begin
-			// Assign T1 to be red
-			set1[4] = 1'b1;
-			 set1[3] = 1'b0;
-			 set1[2] = 1'b0;
-			// Assign T2 to be green
-			 set2[4] = 1'b0;
-			 set2[3] = 1'b0;
-			 set2[2] = 1'b1;
-			// Assign P1 to be red
-			 set1[1] = 1'b1;
-			 set1[0] = 1'b0;
-			// Assign P2 to be green 
-			 set2[1] = 1'b0;
-			 set2[0] = 1'b1;
-			 // Assign ped_count1 to 0
-			 ped_count1 = 1'b0;
-			 ped_count2 = 1'b0;
-			 enable = 1'b0;
-			 ped_sound1 = 1'b0;
-			 ped_sound2 = 1'b0;
+	always @(*)
+	begin: on_off
+		
+		case(state_sig)
+			4'b0000: begin
+				// Assign T1 to be red
+				set1[4] = 1'b1;
+				 set1[3] = 1'b0;
+				 set1[2] = 1'b0;
+				// Assign T2 to be green
+				 set2[4] = 1'b0;
+				 set2[3] = 1'b0;
+				 set2[2] = 1'b1;
+				// Assign P1 to be red
+				 set1[1] = 1'b1;
+				 set1[0] = 1'b0;
+				// Assign P2 to be green 
+				 set2[1] = 1'b0;
+				 set2[0] = 1'b1;
+				 // Assign ped_count1 to 0
+				 ped_count1 = 1'b0;
+				 ped_count2 = 1'b0;
+				 enable = 1'b0;
+				 ped_sound1 = 1'b0;
+				 ped_sound2 = 1'b0;
 
-			end
-		4'b0001: begin
-			// Assign T1 to be red
-			 set1[4] = 1'b1;
-			 set1[3] = 1'b0;
-			 set1[2] = 1'b0;
-			// Assign T2 to be green
-			 set2[4] = 1'b0;
-			 set2[3] = 1'b0;
-			 set2[2] = 1'b1;
-			// Assign P1 to be red
-			 set1[1] = 1'b1;
-			 set1[0] = 1'b0;
-			 // Assign P2 to be green 
-			 //Flashing ped light on P2
-			 set2[1] = flash_ped;
-			 set2[0] = 1'b0;
-			 ped_count1 = 1'b0;
-			 ped_count2 = count;
-			 enable = 1'b1;
-			 ped_sound1 = 1'b0;
-			 ped_sound2 = beep;
+				end
+			4'b0001: begin
+				// Assign T1 to be red
+				 set1[4] = 1'b1;
+				 set1[3] = 1'b0;
+				 set1[2] = 1'b0;
+				// Assign T2 to be green
+				 set2[4] = 1'b0;
+				 set2[3] = 1'b0;
+				 set2[2] = 1'b1;
+				// Assign P1 to be red
+				 set1[1] = 1'b1;
+				 set1[0] = 1'b0;
+				 // Assign P2 to be green 
+				 //Flashing ped light on P2
+				 set2[1] = flash_ped;
+				 set2[0] = 1'b0;
+				 ped_count1 = 1'b0;
+				 ped_count2 = count;
+				 enable = 1'b1;
+				 ped_sound1 = 1'b0;
+				 ped_sound2 = beep;
 
-			// 
-			end
-		4'b0010: begin
-			// Assign T1 to be red
-			 set1[4] = 1'b1;
-			 set1[3] = 1'b0;
-			 set1[2] = 1'b0;
-			// Assign T2 to be Yellow
-			 set2[4] = 1'b0;
-			 set2[3] = 1'b1;
-			 set2[2] = 1'b0;
-			// Assign P1 to be red
-			 set1[1] = 1'b1;
-			 set1[0] = 1'b0;
-			// Assign P2 to be Red
-			 set2[1] = 1'b1;
-			 set2[0] = 1'b0;
-			 ped_count1 = 1'b0;
-			 ped_count2 = 1'b0;
-			 enable = 1'b0;
-			 ped_sound1 = 1'b0;
-			 ped_sound2 = 1'b0;
-			end
+				// 
+				end
+			4'b0010: begin
+				// Assign T1 to be red
+				 set1[4] = 1'b1;
+				 set1[3] = 1'b0;
+				 set1[2] = 1'b0;
+				// Assign T2 to be Yellow
+				 set2[4] = 1'b0;
+				 set2[3] = 1'b1;
+				 set2[2] = 1'b0;
+				// Assign P1 to be red
+				 set1[1] = 1'b1;
+				 set1[0] = 1'b0;
+				// Assign P2 to be Red
+				 set2[1] = 1'b1;
+				 set2[0] = 1'b0;
+				 ped_count1 = 1'b0;
+				 ped_count2 = 1'b0;
+				 enable = 1'b0;
+				 ped_sound1 = 1'b0;
+				 ped_sound2 = 1'b0;
+				end
 
-		4'b0011: begin
-			// Assign T1 to be green
-			 set1[4] = 1'b0;
-			 set1[3] = 1'b0;
-			 set1[2] = 1'b1;
-			// Assign T2 to be red
-			 set2[4] = 1'b1;
-			 set2[3] = 1'b0;
-			 set2[2] = 1'b0;
-			// Assign P1 to be green
-			 set1[1] = 1'b0;
-			 set1[0] = 1'b1;
-			// Assign P2 to be red 
-			 set2[1] = 1'b1;
-			 set2[0] = 1'b0;
-			 ped_count1 = 1'b0;
-			 ped_count2 = 1'b0;
-			 enable = 1'b0;
-			 ped_sound1 = 1'b0;
-			 ped_sound2 = 1'b0;
-			end
+			4'b0011: begin
+				// Assign T1 to be green
+				 set1[4] = 1'b0;
+				 set1[3] = 1'b0;
+				 set1[2] = 1'b1;
+				// Assign T2 to be red
+				 set2[4] = 1'b1;
+				 set2[3] = 1'b0;
+				 set2[2] = 1'b0;
+				// Assign P1 to be green
+				 set1[1] = 1'b0;
+				 set1[0] = 1'b1;
+				// Assign P2 to be red 
+				 set2[1] = 1'b1;
+				 set2[0] = 1'b0;
+				 ped_count1 = 1'b0;
+				 ped_count2 = 1'b0;
+				 enable = 1'b0;
+				 ped_sound1 = 1'b0;
+				 ped_sound2 = 1'b0;
+				end
 
-		4'b0100: begin
-			// Assign T1 to be green
-			 set1[4] = 1'b0;
-			 set1[3] = 1'b0;
-			 set1[2] = 1'b1;
-			// Assign T2 to be red
-			 set2[4] = 1'b1;
-			 set2[3] = 1'b0;
-			 set2[2] = 1'b0;
-			// Assign P1 to be green
-			 set1[1] = flash_ped;
-			 set1[0] = 1'b0;
-			// Assign P2 to be red 
-			 set2[1] = 1'b1;
-			 set2[0] = 1'b0;
-			 ped_count1 = count;
-			 ped_count2 = 1'b0;
-			 enable = 1'b1;
-			 ped_sound1 = beep;
-			 ped_sound2 = 1'b0;
-			end
+			4'b0100: begin
+				// Assign T1 to be green
+				 set1[4] = 1'b0;
+				 set1[3] = 1'b0;
+				 set1[2] = 1'b1;
+				// Assign T2 to be red
+				 set2[4] = 1'b1;
+				 set2[3] = 1'b0;
+				 set2[2] = 1'b0;
+				// Assign P1 to be green
+				 set1[1] = flash_ped;
+				 set1[0] = 1'b0;
+				// Assign P2 to be red 
+				 set2[1] = 1'b1;
+				 set2[0] = 1'b0;
+				 ped_count1 = count;
+				 ped_count2 = 1'b0;
+				 enable = 1'b1;
+				 ped_sound1 = beep;
+				 ped_sound2 = 1'b0;
+				end
 
-		4'b0101: begin
-			// Assign T1 to be yellow
-			 set1[4] = 1'b0;
-			 set1[3] = 1'b1;
-			 set1[2] = 1'b0;
-			// Assign T2 to be red
-			 set2[4] = 1'b1;
-			 set2[3] = 1'b0;
-			 set2[2] = 1'b0;
-			//Assign P1 to be red
-			 set1[1] = 1'b1;
-			 set1[0] = 1'b0;
-			// Assign P2 to be red 
-			 set2[1] = 1'b1;
-			 set2[0] = 1'b0;
-			 ped_count1 = 1'b0;
-			 ped_count2 = 1'b0;
-			 enable = 1'b0;
-			 ped_sound1 = 1'b0;
-			 ped_sound2 = 1'b0;
-			end
-	endcase
-end
+			4'b0101: begin
+				// Assign T1 to be yellow
+				 set1[4] = 1'b0;
+				 set1[3] = 1'b1;
+				 set1[2] = 1'b0;
+				// Assign T2 to be red
+				 set2[4] = 1'b1;
+				 set2[3] = 1'b0;
+				 set2[2] = 1'b0;
+				//Assign P1 to be red
+				 set1[1] = 1'b1;
+				 set1[0] = 1'b0;
+				// Assign P2 to be red 
+				 set2[1] = 1'b1;
+				 set2[0] = 1'b0;
+				 ped_count1 = 1'b0;
+				 ped_count2 = 1'b0;
+				 enable = 1'b0;
+				 ped_sound1 = 1'b0;
+				 ped_sound2 = 1'b0;
+				end
+		endcase
+	end
 endmodule
 
 
