@@ -3,6 +3,8 @@ Verilog for the traffic light model simulation
 
 Created by Bill Huang, Jordan Feng, Yining Wang
 
+Welcome! This is our CSCB58 final project for the Summer 2017 semester.
+
 This is the traffic light intersection simulator system. There are four traffic lights representing each side of the intersection accompanied with pedestrian lights.
 
 This traffic system is automated, but it also includes the option to be idle (i.e. having only blinking red or yellow lights). The pedestrian lights also blink as a warning to pedestrians that the traffic lights will soon change. This is accompanied with a buzzer that better warns pedestrians. There are also two sets of pedestrian counters to better show people how soon the lights will change, making it unsafe to cross the road.
