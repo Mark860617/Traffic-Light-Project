@@ -3,13 +3,9 @@ module traffic_light(input [17:0] SW, input CLOCK_50, output [35:0] GPIO, output
 	//Create wires for the slowed down clock signal and the timer.
 	wire [7:0] ped_count1;
 	wire [7:0] ped_count2;
-	// Slow down the clock signal from 50 Mhz to about 1 hz
-	//clock_slower(.clock(CLOCK_50), .select_time(timer), .led(new_clock));
-	// Adjust the different lengths before transitions of each light. 
-	//traffic_light_timer(.clock(new_clock), .resetn(SW[1]), .change(SW[2]), .timer(timer));
-	// Output the desired signal through the GPIO pins into the indicated LEDs
-	//traffic_light_output(.clock(new_clock), .clock2(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2));
+	// Send the parameter inputs to set the traffic
 	set_traffic(.s(SW[17:16]), .clock(CLOCK_50), .resetn(SW[1]), .change(SW[2]), .set1(GPIO[4:0]), .set2(GPIO[10:5]), .ped_count1(ped_count1), .ped_count2(ped_count2), .ped_sound1(GPIO[34]), .ped_sound2(GPIO[35]));
+	// Show the counter on the respective HEX displays for the pedestrian counters
 	hex_decoder(.hex_digit(ped_count1[7:4]), .segments(HEX7));
 	hex_decoder(.hex_digit(ped_count1[3:0]), .segments(HEX6));
 	hex_decoder(.hex_digit(ped_count1[7:4]), .segments(HEX5));
@@ -21,18 +17,27 @@ module traffic_light(input [17:0] SW, input CLOCK_50, output [35:0] GPIO, output
 endmodule
 
 module set_traffic(input [1:0] s, input clock, input resetn, input change, output reg [4:0] set1, output reg [4:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2, output reg ped_sound1, output reg ped_sound2);
+	//Wire for connecting the signals of set 1 and set 2 of the traffic lights
 	wire [4:0] s1, s2;
+	//Wire for connecting the signals of set 1 and set 2 of the pedestrian lights
 	wire [7:0] p1, p2;
+	//Wire for connecting the signals of the counters controlling the cycles of other functionalities
 	wire flash_led;
 	wire new_clock;
 	wire timer;
 	wire sound1, sound2;
+	//Slow down the clock cycles of CLOCK_50
 	clock_slower(.clock(clock), .select_time(timer), .new_clock(new_clock));
+	//Time the traffic lights to make them in sync
 	traffic_light_timer(.clock(new_clock), .resetn(resetn), .change(change), .timer(timer));
+	//Control the output of the traffic lights depending on their signals
 	traffic_light_output(.clock(new_clock), .clock2(clock), .resetn(resetn), .change(change), .set1(s1), .set2(s2), .ped_count1(p1), .ped_count2(p2), .ped_sound1(sound1), .ped_sound2(sound2));
+	//Flash some of the leds if the signal indicates to flash
 	flashLED(.clock(clock), .led(flash_led));
+	// The switches that control the traffic light function (normal function, flashing red, flashing yellow)
 	always @(*)
 	begin
+		//The MUX that select the traffic light function
 		case(s[1:0])
 			2'b01: begin 
 				set1 <= s1; 
@@ -88,7 +93,8 @@ endmodule
 
 
 module pedestrian_counter(input clock, input enable, output reg [7:0] digits);
-	reg [32:0] timer = 32'd50000000; //CLOCK_50 is a clock that pulses at 50MHz or 50 millions times per second.change back to 30 mil if over 1 second
+	//The registers for storing the timer
+	reg [32:0] timer = 32'd50000000;
 	reg [7:0] init;
 	// 15 in hexadeximal or 8h'15
 	// On positive clock edge
@@ -98,15 +104,17 @@ module pedestrian_counter(input clock, input enable, output reg [7:0] digits);
 			// When the timer count is not zero decrement by 1
 			if (timer != 32'd0) 
 				timer <= timer - 1;
-			// If timer count reaches zero, reverse LED state and reset the timer.
+			// Decrement by a specific value to account for hex to decimal conversion
 			else if (init == 8'b0001_0000) begin
 				init <= init - 4'b0111;
 				timer <= 32'd50000000;
 			end
+			// If timer count reaches zero, reverse LED state and reset the timer.
 			else if (init == 8'b0000_0000) begin
 				init <= 8'b0001_0101;
 				timer <= 32'd50000000;
 			end
+			// Decrement from init by 1 and reset timer to default
 			else begin 
 				init <= init - 1'b1;
 				timer <= 32'd50000000;
@@ -116,6 +124,7 @@ module pedestrian_counter(input clock, input enable, output reg [7:0] digits);
 		else begin
 			init <= 0;
 		end
+		//Show the digits as the init value
 		digits <= init;
 	end
 endmodule
@@ -185,6 +194,7 @@ module traffic_light_timer(input clock, input resetn, input change, output reg t
 		//set2[4:2] T2 (Traffic Light Set 2)
 	always @(*)
 	begin: on_off
+		//Adjust the time intervals depending on the state from the FSM.
 		case(state_sig)
 			4'b0000: begin //T1 R T2 G 10 secs
 				timer = 1'b0;
@@ -214,28 +224,28 @@ endmodule
 
 
 module traffic_light_output(input clock, input clock2, input resetn, input change, output reg [5:0] set1, output reg [5:0] set2, output reg [7:0] ped_count1, output reg [7:0] ped_count2, output reg ped_sound1, output reg ped_sound2);
-	// This is the light module for assigning the proper signals to the proper output ***LED FOR TESTING ATM***
+	// This is the light module for assigning the proper signals to the proper output
 	wire [3:0] state_sig;
 	control(.clock(clock), .resetn(resetn), .change(change), .out(state_sig));
-
-	 // set1 is LEDR
-	// set2 is LEDG
-		//send signal to the breadboard
-		//set1[1:0] P1
-		//set1[4:2] T1
-		//set2[1:0] P2
-		//set2[4:2] T2
+	
+	//T1 and T2 corresponds to traffic light 1 set 1 and 2.
+	//P1 and P2 corresponds to pedestrian light 1 set 1 and 2.
+	//set1[1:0] P1
+	//set1[4:2] T1
+	//set2[1:0] P2
+	//set2[4:2] T2
 	wire flash_ped;
 	wire [7:0] count;
 	reg enable;
 	wire beep;
+	// Adjust the counters and traffic lights and the buzzer according to signals
 	pedestrian_counter(.clock(clock2), .enable(enable), .digits(count));
 	flashLED(.clock(clock2), .led(flash_ped));
 	flashLED(.clock(clock2), .led(beep));
 
 	always @(*)
 	begin: on_off
-		
+		//Change the traffic lights depending on the FSM
 		case(state_sig)
 			4'b0000: begin
 				// Assign T1 to be red
@@ -381,12 +391,20 @@ module control(input clock, input resetn, input change, output [3:0] out);
 	// The fsm to determine the state of the traffic/pedestrian lights
 	reg [3:0] curr, next;
 
+	//T1 and T2 corresponds to traffic light 1 set 1 and 2.
+	//P1 and P2 corresponds to pedestrian light 1 set 1 and 2.
 	//State A is T1 red, T2 green, p1 red, p2 green
+	//State B is T1 red, T2 green, p1 red, p2 green with blinking pedestrian light
+	//State C is T1 red, T2 yellow, p1 red, p2 red
+	//State D is T1 green, T2 red, p1 green, p2 red
+	//State E is T1 green, T2 red, p1 green, p2 red with blinking pedestrian light
+	//State F is T1 yellow, T2 red, p1 red, p2 red
 	localparam A = 4'b0000, B = 4'b0001, C = 4'b0010, D = 4'b0011, E = 4'b0100, F = 4'b0101;
 
 	//The state table for the various states of the traffic lights
 	always @(*)
 	begin: state_table
+		//Make changes to the state as in an FSM
 		case(curr)
 			A: begin
 				if (!change) next <= A;				
