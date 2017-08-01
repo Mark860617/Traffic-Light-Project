@@ -1,0 +1,123 @@
+
+
+﻿CSCB58 Project File: Summer 2017
+ 
+Team Member A
+-------------
+First Name: Jordan
+Last Name: Feng
+Student Number: 1003371923
+UofT E-mail Address: jord.feng@mail.utoronto.ca
+ 
+ 
+Team Member B
+-------------
+First Name: Bill
+Last Name: Huang
+Student Number: 1003363013
+UofT E-mail Address: billo.huang@mail.utoronto.ca
+ 
+Team Member C (Optional)
+-------------
+First Name: Yining
+Last Name: Wang
+Student Number: 1002241674
+UofT E-mail Address: yiningwang.wang@mail.utoronto.ca
+ 
+
+ 
+Project Details
+---------------
+Project Title: Street Intersection Simulator
+ 
+Project Description: This project consists of an intersection with four traffic lights. The lights will automatically switch or they can also be switched manually through user's inputs to adjust the time interval change as needed.
+ 
+Video URL: https://www.youtube.com/watch?v=DGKrXmBD6Q8&feature=youtu.be
+ 
+Code URL (please upload a copy of this file to your repository at the end of the project as well, it will serve as a useful resource for future development):
+ https://github.com/SCPD101/Traffic-Light-Project
+ 
+Proposal
+--------
+ 
+What do you plan to have completed by the end of the first lab session?:
+By the end of the first lab session, we plan to have discussed all the details and ideas
+for the project and draw a schematic of how the project should work.
+After that, the work would be split within the team members.
+We would start to work on the verilog code, making as much progress for the project and begin to check for bugs.
+ 
+What do you plan to have completed by the end of the second lab session?:
+By the end of the second lab session, we plan to be completed our verilog code.
+This lab session is where we would look at each other's code and detect bugs or various other
+possible issues so that they can be fixed and also test it.
+The code would also be integrated together to combine the parts into one project.
+ 
+What do you plan to have completed by the end of the third lab session?:
+On this week, we would check the project by using the code on the boards and debugging it.
+We will check to make sure all the components are working.
+ 
+What is your backup plan if things don’t work out as planned?
+We have other backup project ideas that overlap with the functionality of the traffic light.
+If the traffic light does not work as expected, some of the code can be reused for those other
+backup ideas.
+ 
+ 
+What hardware will you need beyond the DE2 board
+(be sure to e-mail Brian if it’s anything beyond the basics to make sure there’s enough to go around)
+Along with the DE2 board, we will need a breadboard, some resistors (estimated 25), some leds (estimated 10 red, 10 green and 5 yellow) and also wires to connect the components together. 
+We may also need some gates for the breadboard (Not, Or, And, Xor, Nand, Nor, etc).
+We will use many wires for connecting the board to the GPIO ports. 
+ 
+Motivations
+-----------
+How does this project relate to the material covered in CSCB58?:
+This intersection simulator relates to the material covered in CSCB58 as we will utilize FSMs in order to control the state of each traffic light. FSMs will also utilize Flip flops and clocks to store the specific states to control what light will turn on depending on the clock cycle.
+Multiplexers can determine whether the changes of state will occur by automation or manually through the control of the user.
+ 
+ 
+Why is this project interesting/cool (for CSCB58 students, and for non CSCB58 students?):
+This project allows the user to visualize what happens in an intersection and how the lights are in sync with each other. This project also allows the user to experience controlling the traffic lights and see how the lights change.
+ 
+Why did you personally choose this project?:
+We chose the intersection traffic lights because we thought it would be a fun way to incorporate various hardware and utilize certain tools, as well as the concepts covered in CSCB58.
+This would also be interesting to showcase the technology that could be used in real life applications but in a miniature, physical, simulated environment.
+We want to build a model scale version of a traffic intersection with a functioning traffic and pedestrian signals and see how they interact.
+ 
+ 
+Attributions
+------------
+Provide a complete list of any external resources your project used (attributions should also be included in your
+code).  
+ 
+Updates
+-------
+Week 1: During the first lab session, we tested our Verilog code and it was a success for the manual control of the traffic lights. 
+Some time was spent getting familiar with how GPIOs work and how to connect them with the components in our breadboard.
+We were able to understand how the circuit is created within the connection of the GPIOs in the breadboard and assembled a prototype.
+There is a bit of trouble with the FSM as after a couple of cycles, the system freezes and does not respond until we reset it. 
+We also started inplementing the automatic control of the traffic lights but there is a bug within the rate divider and the counter which is preventing the lights from changing at the desired interval,
+The system works as expected for both the sets of traffic lights and the pedrestian lights on the breadboard. 
+For next week, we plan on completing the automation of the traffic lights and also implementing the multiplexer for controlling when the change of traffic lights
+occur manually or automatically. 
+
+Week 2: During the second lab session, we tested our Verilog code with the modifications and ensured that all components work as expected. 
+We reconstructed our traffic light intersection configuration on the breadboard and connected it with the respective GPIO pins.
+In this lab session, our team focused on creating the automated side of the traffic light to work.
+We were successful in creating the automation by slowing down the cycles of CLOCK_50 and using the adjusted clock cycle as the one
+that controls the traffic lights.
+We were also successful in adding another feature to the traffic lights which is the blinking of the pesdrestrian lights that occurr
+when the green light is about to be transitioned. 
+For next week, we plan on adding another feature which is the counter for the pedestrian crossing using the hex decoder and 7 segment display,
+the additional flashing of the yellow and red lights,
+and also adding the multiplexer to the design to change when the control is manual or automatic.
+
+Week 3: This week, we implemented additional features including the flashing of the pedestrian lights (i.e. the red "stop" light blinks when 
+the lights are about to change) and the controlling of the lights with the control of two switches. They set whether the traffic lights
+perform normal operations, flashing red or flashing yellow. We also implemented the counters for the pedestrians that count down the time
+before the lights will change. However, during the process, there were some syncing problems between the counters and the lights changing 
+which was fixed with the changing of the timer. Lastly, for some sound effects, we added two buzzers to the breadboard, they will make a noise
+in sequence similar to some pedestrian crossings where a noise is made. In our case, the buzzer sound is a warning to crossers that the traffic
+lights will change soon. They have been programmed to buzz when the red LED on the pedestrian lights are on during the flashing sequence, and 
+are silent otherwise. Some issues encountered were that sometimes the buzzer was too quiet and/or the LEDs were too dim. Loose wire connections 
+and resistors with too many ohms were some of the issues causing this and after the replacement with other wires and using resistors 220 ohms
+or lower, the unit functions as planned.
